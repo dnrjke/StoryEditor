@@ -906,11 +906,12 @@ export class EditorPanel {
 
             const isSelected = i === this.selectedIndex;
             const isExpanded = this.expandedIndex === -2 || i === this.expandedIndex;
+            const hideHeader = this.allExpanded && isExpanded;
             const entryHeight = isExpanded
-                ? this.computeExpandedHeight(step, d, effectiveWidth)
+                ? this.computeExpandedHeight(step, d, effectiveWidth, hideHeader)
                 : d.stepListEntryHeight;
 
-            const entryControl = this.createStepEntry(step, i, totalHeight, isSelected, isExpanded, entryHeight, effectiveWidth);
+            const entryControl = this.createStepEntry(step, i, totalHeight, isSelected, isExpanded, entryHeight, effectiveWidth, hideHeader);
             this.stepListContent.addControl(entryControl);
             this.entryIndexMap.set(i, this.entryControls.length);
             this.entryControls.push(entryControl);
@@ -929,8 +930,8 @@ export class EditorPanel {
      * 확장 상태의 엔트리 높이를 계산합니다.
      * 헤더 행 + 전체 텍스트의 워드랩 높이
      */
-    private computeExpandedHeight(step: ScenarioStep, d: EditorPanelDimensions, effectiveWidth?: number): number {
-        const headerHeight = d.stepListEntryHeight;
+    private computeExpandedHeight(step: ScenarioStep, d: EditorPanelDimensions, effectiveWidth?: number, hideHeader?: boolean): number {
+        const headerHeight = hideHeader ? 0 : d.stepListEntryHeight;
         const listW = effectiveWidth ?? d.stepListWidth;
         const textAreaWidth = listW - 24; // padding
         const fullText = this.getStepFullText(step);
@@ -1005,7 +1006,8 @@ export class EditorPanel {
         isSelected: boolean,
         isExpanded: boolean,
         entryHeight: number,
-        effectiveWidth?: number
+        effectiveWidth?: number,
+        hideHeader?: boolean
     ): GUI.Rectangle {
         if (!this.currentDims) throw new Error('Dimensions not set');
         const d = this.currentDims;
@@ -1025,13 +1027,29 @@ export class EditorPanel {
         container.cornerRadius = 4;
 
         // --- Header row hit target: 클릭 → 선택 + 아코디언 토글 ---
+        // (allExpanded 모드에서는 헤더 생략 — 텍스트 영역만 표시)
+        if (hideHeader) {
+            // Color bar for type identification (left edge)
+            const badgeConfig = BADGE_MAP[step.type];
+            const colorBar = new GUI.Rectangle(`StepColorBar_${index}`);
+            colorBar.widthInPixels = 4;
+            colorBar.heightInPixels = entryHeight;
+            colorBar.background = badgeConfig.color;
+            colorBar.thickness = 0;
+            colorBar.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            colorBar.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
+            colorBar.isHitTestVisible = false;
+            container.addControl(colorBar);
+        }
+
         const headerHit = new GUI.Rectangle(`StepHeader_${index}`);
         headerHit.thickness = 0;
         headerHit.widthInPixels = listW;
-        headerHit.heightInPixels = d.stepListEntryHeight;
+        headerHit.heightInPixels = hideHeader ? 0 : d.stepListEntryHeight;
         headerHit.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
         headerHit.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        headerHit.isHitTestVisible = true;
+        headerHit.isHitTestVisible = !hideHeader;
+        headerHit.isVisible = !hideHeader;
 
         let headerDownX = 0;
         let headerDownY = 0;
@@ -1168,8 +1186,7 @@ export class EditorPanel {
 
         const preview = new GUI.TextBlock(`StepPreview_${index}`);
         preview.text = truncated;
-        preview.color = COLORS.TEXT_WHITE;
-        preview.isVisible = !isExpanded;
+        preview.color = isExpanded ? 'rgba(255, 255, 255, 0.5)' : COLORS.TEXT_WHITE;
         preview.fontSizeInPixels = d.stepPreviewFontSize;
         preview.fontFamily = FONT.FAMILY.BODY;
         preview.widthInPixels = availableWidth;
@@ -1183,7 +1200,8 @@ export class EditorPanel {
 
         // --- Expanded text area: 더블클릭 → 인라인 편집 ---
         if (isExpanded) {
-            const expandedAreaHeight = entryHeight - d.stepListEntryHeight;
+            const headerH = hideHeader ? 0 : d.stepListEntryHeight;
+            const expandedAreaHeight = entryHeight - headerH;
 
             // Hit target for expanded text area
             const textHit = new GUI.Rectangle(`StepTextHit_${index}`);
@@ -1193,7 +1211,7 @@ export class EditorPanel {
             textHit.heightInPixels = expandedAreaHeight;
             textHit.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
             textHit.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-            textHit.topInPixels = d.stepListEntryHeight;
+            textHit.topInPixels = headerH;
             textHit.isHitTestVisible = true;
             textHit.cornerRadius = 4;
 
@@ -1221,6 +1239,13 @@ export class EditorPanel {
                     textLastClick = 0;
                 } else {
                     textLastClick = now;
+                    // In headerless (allExpanded) mode, single click selects
+                    if (hideHeader && this.selectedIndex !== index) {
+                        this.selectedIndex = index;
+                        this.renderEntries();
+                        this.updateActionButtonStates();
+                        requestAnimationFrame(() => this.updateScrollerDimensions());
+                    }
                 }
             });
 
@@ -1360,7 +1385,8 @@ export class EditorPanel {
             position: fixed;
             left: 0; right: 0; bottom: 0;
             background: rgba(10, 22, 40, 0.97);
-            border-top: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4), 0 -1px 4px rgba(0, 0, 0, 0.2);
             padding: 8px 12px;
             max-height: 45vh;
             z-index: 10001;
