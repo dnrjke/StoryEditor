@@ -1168,7 +1168,8 @@ export class EditorPanel {
 
         const preview = new GUI.TextBlock(`StepPreview_${index}`);
         preview.text = truncated;
-        preview.color = isExpanded ? 'rgba(255, 255, 255, 0.5)' : COLORS.TEXT_WHITE;
+        preview.color = COLORS.TEXT_WHITE;
+        preview.isVisible = !isExpanded;
         preview.fontSizeInPixels = d.stepPreviewFontSize;
         preview.fontFamily = FONT.FAMILY.BODY;
         preview.widthInPixels = availableWidth;
@@ -1359,7 +1360,7 @@ export class EditorPanel {
             position: fixed;
             left: 0; right: 0; bottom: 0;
             background: rgba(10, 22, 40, 0.97);
-            border-top: 2px solid #33C3FF;
+            border-top: none;
             padding: 8px 12px;
             max-height: 45vh;
             z-index: 10001;
@@ -1521,13 +1522,19 @@ export class EditorPanel {
             }
         });
 
-        // Keyboard handling via visualViewport
+        // Keyboard handling via visualViewport (debounced to prevent flicker)
+        let keyboardRaf = 0;
         const adjustForKeyboard = () => {
-            const vv = window.visualViewport;
-            if (!vv) return;
-            const bottomOffset = window.innerHeight - (vv.offsetTop + vv.height);
-            panel.style.bottom = `${Math.max(0, bottomOffset)}px`;
+            if (keyboardRaf) cancelAnimationFrame(keyboardRaf);
+            keyboardRaf = requestAnimationFrame(() => {
+                const vv = window.visualViewport;
+                if (!vv) return;
+                const bottomOffset = window.innerHeight - (vv.offsetTop + vv.height);
+                panel.style.bottom = `${Math.max(0, bottomOffset)}px`;
+            });
         };
+        // Add smooth transition for keyboard appear/disappear
+        panel.style.transition = 'bottom 0.15s ease-out';
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', adjustForKeyboard);
             window.visualViewport.addEventListener('scroll', adjustForKeyboard);
