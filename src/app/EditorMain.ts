@@ -40,6 +40,7 @@ function main() {
         console.error('[EditorMain] Canvas not found');
         return;
     }
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     // Create Babylon Engine (WebGL2)
     const engine = new BABYLON.Engine(canvas, true, {

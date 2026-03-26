@@ -1277,7 +1277,7 @@ export class EditorPanel {
             editBtn.addControl(editBtnIcon);
 
             editBtn.onPointerClickObservable.add(() => {
-                this.startInlineEdit(index, step);
+                this.showEditForm(step, index);
             });
             editBtn.onPointerEnterObservable.add(() => {
                 editBtn.background = 'rgba(51, 195, 255, 0.30)';
@@ -1344,10 +1344,16 @@ export class EditorPanel {
         const rawScreenLeft = canvasRect.left + textLeft * rootScale;
         const rawScreenWidth = textWidth * rootScale;
         const viewportWidth = window.innerWidth;
+        const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
         const screenLeft = Math.max(4, Math.min(rawScreenLeft, viewportWidth - rawScreenWidth - 4));
         const screenWidth = Math.min(rawScreenWidth, viewportWidth - 8);
-        const screenTop = canvasRect.top + textTop * rootScale;
-        const screenHeight = Math.max(textHeight * rootScale, 40);
+        const rawScreenTop = canvasRect.top + textTop * rootScale;
+        const rawScreenHeight = Math.max(textHeight * rootScale, 40);
+        // Clamp height: on mobile portrait, limit to 40% of viewport height
+        const maxEditorHeight = this.compactMode ? viewportHeight * 0.4 : viewportHeight * 0.6;
+        const screenHeight = Math.min(rawScreenHeight, maxEditorHeight);
+        // Clamp top: ensure editor is fully visible within viewport
+        const screenTop = Math.max(8, Math.min(rawScreenTop, viewportHeight - screenHeight - 8));
 
         // Determine editable text content
         let editableText = '';
