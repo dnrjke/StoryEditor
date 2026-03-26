@@ -1313,13 +1313,250 @@ export class EditorPanel {
 
         const canvas = document.querySelector('canvas') as HTMLCanvasElement;
         if (!canvas) return;
-        const canvasRect = canvas.getBoundingClientRect();
-        const rootScale = this.currentScaleInfo.rootScale;
         const d = this.currentDims;
 
+        // Determine editable text content
+        let editableText = '';
+        if (step.type === 'narration') {
+            editableText = step.text;
+        } else if (step.type === 'dialogue') {
+            editableText = step.text;
+        } else if (step.type === 'auto') {
+            editableText = step.text ?? '';
+        }
+
+        // Create DOM container (full-screen backdrop)
+        const container = document.createElement('div');
+        container.id = 'editor-panel-inline-edit';
+        container.style.cssText = `
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 10000;
+        `;
+
+        if (this.compactMode) {
+            // ============ MOBILE: Bottom-sheet style ============
+            this._buildMobileInlineEditor(container, step, index, editableText, d);
+        } else {
+            // ============ DESKTOP: Position at entry ============
+            this._buildDesktopInlineEditor(container, step, index, editableText, d, canvas);
+        }
+
+        document.body.appendChild(container);
+        this.inlineEditorContainer = container;
+    }
+
+    private _buildMobileInlineEditor(
+        container: HTMLDivElement,
+        step: ScenarioStep,
+        index: number,
+        editableText: string,
+        _d: EditorPanelDimensions,
+    ): void {
+        // Bottom-sheet panel
+        const panel = document.createElement('div');
+        panel.style.cssText = `
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            background: rgba(10, 22, 40, 0.97);
+            border-top: 2px solid #33C3FF;
+            padding: 8px 12px;
+            max-height: 45vh;
+            z-index: 10001;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-sizing: border-box;
+        `;
+
+        // Speaker / Duration input row for dialogue/auto steps
+        let speakerInput: HTMLInputElement | null = null;
+        let durationInput: HTMLInputElement | null = null;
+
+        if (step.type === 'dialogue' || step.type === 'auto') {
+            const inputRow = document.createElement('div');
+            inputRow.style.cssText = `display: flex; gap: 8px; flex-shrink: 0;`;
+
+            speakerInput = document.createElement('input');
+            speakerInput.type = 'text';
+            speakerInput.value = step.type === 'dialogue' ? step.speaker : (step.speaker ?? '');
+            speakerInput.placeholder = 'Speaker';
+            speakerInput.style.cssText = `
+                flex: 1;
+                height: 36px;
+                font-size: 14px;
+                background: rgba(255, 255, 255, 0.06);
+                border: 1px solid #D4A537;
+                border-radius: 6px;
+                color: #FFD700;
+                font-family: ${FONT.FAMILY.BODY};
+                padding: 2px 8px;
+                outline: none;
+                box-sizing: border-box;
+            `;
+            inputRow.appendChild(speakerInput);
+
+            if (step.type === 'auto') {
+                durationInput = document.createElement('input');
+                durationInput.type = 'number';
+                durationInput.value = String(step.duration);
+                durationInput.min = '0';
+                durationInput.step = '100';
+                durationInput.placeholder = 'Duration (ms)';
+                durationInput.style.cssText = `
+                    width: 80px;
+                    height: 36px;
+                    font-size: 14px;
+                    background: rgba(255, 255, 255, 0.06);
+                    border: 1px solid #33C3FF;
+                    border-radius: 6px;
+                    color: #33C3FF;
+                    font-family: ${FONT.FAMILY.BODY};
+                    padding: 2px 8px;
+                    outline: none;
+                    box-sizing: border-box;
+                `;
+                inputRow.appendChild(durationInput);
+            }
+
+            panel.appendChild(inputRow);
+        }
+
+        // Textarea
+        const textarea = document.createElement('textarea');
+        textarea.value = editableText;
+        textarea.style.cssText = `
+            width: 100%;
+            flex: 1;
+            min-height: 80px;
+            font-size: 16px;
+            resize: none;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #fff;
+            font-family: ${FONT.FAMILY.BODY};
+            padding: 8px;
+            line-height: 1.5;
+            outline: none;
+            box-sizing: border-box;
+            overflow-y: auto;
+        `;
+        panel.appendChild(textarea);
+
+        // Auto-expand textarea (capped to 45vh minus input row)
+        const autoExpandTextarea = () => {
+            const lineCount = Math.min((textarea.value.split('\n').length) + 1, 20);
+            const lineH = 16 * 1.5; // font-size 16px * line-height 1.5
+            const desiredH = lineCount * lineH + 16;
+            const maxH = window.innerHeight * 0.45 - 60; // leave room for input row + padding
+            textarea.style.height = `${Math.max(80, Math.min(desiredH, maxH))}px`;
+        };
+        textarea.addEventListener('input', autoExpandTextarea);
+        autoExpandTextarea();
+
+        container.appendChild(panel);
+
+        // Save function
+        const saveAndClose = () => {
+            const newText = textarea.value;
+            const newSpeaker = speakerInput?.value;
+            const newDuration = durationInput ? parseInt(durationInput.value, 10) : undefined;
+
+            let newStep: ScenarioStep | null = null;
+            if (step.type === 'narration') {
+                newStep = { type: 'narration', text: newText };
+            } else if (step.type === 'dialogue') {
+                newStep = { type: 'dialogue', speaker: newSpeaker ?? '', text: newText };
+            } else if (step.type === 'auto') {
+                newStep = {
+                    type: 'auto',
+                    duration: (newDuration != null && !isNaN(newDuration)) ? newDuration : 2000,
+                } as ScenarioStep;
+                if (newSpeaker) (newStep as import('../engines/narrative/types').AutoStep).speaker = newSpeaker;
+                if (newText) (newStep as import('../engines/narrative/types').AutoStep).text = newText;
+            }
+
+            if (newStep) {
+                const event = new CustomEvent('editor-panel-step-edited', {
+                    detail: { index, step: newStep }
+                });
+                window.dispatchEvent(event);
+            }
+
+            this.hideInlineEditor();
+        };
+
+        // Backdrop tap → save (pointerdown for mobile)
+        container.addEventListener('pointerdown', (e) => {
+            if (e.target === container) {
+                saveAndClose();
+            }
+        });
+
+        // Ctrl+Enter → save, Escape → cancel
+        const keyHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                saveAndClose();
+            } else if (e.key === 'Escape') {
+                this.hideInlineEditor();
+            }
+        };
+        textarea.addEventListener('keydown', keyHandler);
+        speakerInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                textarea.focus();
+            } else if (e.key === 'Escape') {
+                this.hideInlineEditor();
+            }
+        });
+        durationInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                textarea.focus();
+            } else if (e.key === 'Escape') {
+                this.hideInlineEditor();
+            }
+        });
+
+        // Keyboard handling via visualViewport
+        const adjustForKeyboard = () => {
+            const vv = window.visualViewport;
+            if (!vv) return;
+            const bottomOffset = window.innerHeight - (vv.offsetTop + vv.height);
+            panel.style.bottom = `${Math.max(0, bottomOffset)}px`;
+        };
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', adjustForKeyboard);
+            window.visualViewport.addEventListener('scroll', adjustForKeyboard);
+        }
+
+        // Focus textarea on next frame
+        requestAnimationFrame(() => textarea.focus());
+
+        // Store cleanup for both resize AND scroll listeners
+        (container as HTMLDivElement & { _keyboardCleanup?: () => void })._keyboardCleanup = () => {
+            window.visualViewport?.removeEventListener('resize', adjustForKeyboard);
+            window.visualViewport?.removeEventListener('scroll', adjustForKeyboard);
+        };
+    }
+
+    private _buildDesktopInlineEditor(
+        container: HTMLDivElement,
+        step: ScenarioStep,
+        index: number,
+        editableText: string,
+        d: EditorPanelDimensions,
+        canvas: HTMLCanvasElement,
+    ): void {
+        const canvasRect = canvas.getBoundingClientRect();
+        const rootScale = this.currentScaleInfo!.rootScale;
+
         // Compute entry position in scaler coordinates
-        const scalerW = this.currentScaleInfo.scalerWidth;
-        const scalerH = this.currentScaleInfo.scalerHeight;
+        const scalerW = this.currentScaleInfo!.scalerWidth;
+        const scalerH = this.currentScaleInfo!.scalerHeight;
         const boxLeft = (scalerW - d.panelWidth) / 2;
         const boxTop = (scalerH - d.panelHeight) / 2;
 
@@ -1340,7 +1577,7 @@ export class EditorPanel {
         const entryHeight = (entryCtrl as GUI.Rectangle).heightInPixels;
         const textHeight = entryHeight - d.stepListEntryHeight - 8;
 
-        // Convert to screen coords (clamp to viewport for mobile portrait)
+        // Convert to screen coords
         const rawScreenLeft = canvasRect.left + textLeft * rootScale;
         const rawScreenWidth = textWidth * rootScale;
         const viewportWidth = window.innerWidth;
@@ -1349,30 +1586,9 @@ export class EditorPanel {
         const screenWidth = Math.min(rawScreenWidth, viewportWidth - 8);
         const rawScreenTop = canvasRect.top + textTop * rootScale;
         const rawScreenHeight = Math.max(textHeight * rootScale, 40);
-        // Clamp height: on mobile portrait, limit to 40% of viewport height
-        const maxEditorHeight = this.compactMode ? viewportHeight * 0.4 : viewportHeight * 0.6;
+        const maxEditorHeight = viewportHeight * 0.6;
         const screenHeight = Math.min(rawScreenHeight, maxEditorHeight);
-        // Clamp top: ensure editor is fully visible within viewport
         const screenTop = Math.max(8, Math.min(rawScreenTop, viewportHeight - screenHeight - 8));
-
-        // Determine editable text content
-        let editableText = '';
-        if (step.type === 'narration') {
-            editableText = step.text;
-        } else if (step.type === 'dialogue') {
-            editableText = step.text;
-        } else if (step.type === 'auto') {
-            editableText = step.text ?? '';
-        }
-
-        // Create DOM textarea overlay
-        const container = document.createElement('div');
-        container.id = 'editor-panel-inline-edit';
-        container.style.cssText = `
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: 10000;
-        `;
 
         const textarea = document.createElement('textarea');
         textarea.value = editableText;
@@ -1472,7 +1688,6 @@ export class EditorPanel {
             textarea.style.height = `${newHeight}px`;
         };
         textarea.addEventListener('input', autoExpandTextarea);
-        // Initial size
         autoExpandTextarea();
 
         // Save function
@@ -1505,8 +1720,8 @@ export class EditorPanel {
             this.hideInlineEditor();
         };
 
-        // Click outside → save
-        container.addEventListener('mousedown', (e) => {
+        // Click outside → save (pointerdown for touch compatibility)
+        container.addEventListener('pointerdown', (e) => {
             if (e.target === container) {
                 saveAndClose();
             }
@@ -1539,10 +1754,7 @@ export class EditorPanel {
             }
         });
 
-        document.body.appendChild(container);
-        this.inlineEditorContainer = container;
-
-        // Mobile keyboard avoidance via visualViewport API
+        // Desktop keyboard avoidance via visualViewport API
         const adjustForKeyboard = () => {
             const vv = window.visualViewport;
             if (!vv) return;
@@ -1550,7 +1762,6 @@ export class EditorPanel {
             const textareaRect = textarea.getBoundingClientRect();
             const textareaBottom = textareaRect.bottom;
             if (textareaBottom > visibleBottom - 8) {
-                // Textarea is behind keyboard → move it up
                 const shift = textareaBottom - visibleBottom + 16;
                 textarea.style.top = `${parseFloat(textarea.style.top) - shift}px`;
                 if (speakerInput) {
