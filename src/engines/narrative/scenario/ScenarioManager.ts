@@ -360,9 +360,12 @@ export class ScenarioManager {
         this.callbacks.onEvent?.(step.event, step.payload);
 
         if (this.editorMode) {
-            // 에디터 모드: 이벤트 실행 후 waiting으로 전환 (자동 전진 없음)
-            // 사용자가 클릭 또는 화살표 버튼으로 직접 전진해야 함
+            // 에디터 모드: 이벤트 실행 후 waiting으로 전환
+            // skip(fast-forward)은 이벤트에서 멈추고, auto만 자동 전진
             this.setState('waiting');
+            if (this.autoEnabled) {
+                this.scheduleWaitingAutoAdvance(this.autoWaitDelayMs);
+            }
         } else {
             // 일반 모드: 이벤트는 즉시 자동 전진
             this.advanceStep();
