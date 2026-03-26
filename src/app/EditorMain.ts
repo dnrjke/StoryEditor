@@ -45,7 +45,7 @@ function main() {
     const engine = new BABYLON.Engine(canvas, true, {
         preserveDrawingBuffer: true,
         stencil: true,
-    });
+    }, true /* adaptToDeviceRatio */);
 
     // Create Scene
     const scene = new BABYLON.Scene(engine);

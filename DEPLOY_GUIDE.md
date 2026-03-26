@@ -22,6 +22,8 @@ git branch -M main
 git push -u origin main
 ```
 
+git remote add origin https://github.com/dnrjke/StoryEditor.git
+
 ## 3. Vercel 배포
 
 1. https://vercel.com 로그인 (GitHub 계정 연동)
