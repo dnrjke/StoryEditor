@@ -11,6 +11,7 @@ import type { BackgroundLayer } from '../shared/ui/BackgroundLayer';
 import type { BottomVignetteLayer } from '../shared/ui/BottomVignetteLayer';
 import type { CharacterLayer } from '../shared/ui/CharacterLayer';
 import type { VisualState } from '../editor/StateReconstructor';
+import { resolveImageUrl } from './data/img/ImageRegistry';
 
 export interface EditorFlowDeps {
     backgroundLayer: BackgroundLayer;
@@ -56,9 +57,10 @@ export class EditorFlowController {
             case 'SHOW_CHARACTER': {
                 if (data && typeof data.id === 'string') {
                     const position = (data.position as 'left' | 'center' | 'right') || 'center';
-                    const image = typeof data.image === 'string' ? data.image : undefined;
+                    const rawImage = typeof data.image === 'string' ? data.image : undefined;
+                    const image = rawImage ? (resolveImageUrl(rawImage) ?? rawImage) : undefined;
                     this.chars.showCharacter(data.id, position, image);
-                    console.log(`[EditorFlow] Show character: ${data.id} at ${position}`);
+                    console.log(`[EditorFlow] Show character: ${data.id} at ${position}${image ? ` img=${rawImage}` : ''}`);
                 }
                 break;
             }
@@ -101,7 +103,8 @@ export class EditorFlowController {
 
         // 3. 캐릭터 배치
         for (const [id, info] of state.characters) {
-            this.chars.showCharacter(id, info.position, info.image);
+            const image = info.image ? (resolveImageUrl(info.image) ?? info.image) : undefined;
+            this.chars.showCharacter(id, info.position, image);
         }
 
         console.log(

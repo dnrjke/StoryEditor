@@ -1,0 +1,67 @@
+# Judge 3: 아카데미 수석 연구원 (영양 밸런스 담당)
+# 컨셉: 요리를 '수학과 분자 단위의 과학'으로 취급하는 냉철한 완벽주의자. '손맛'을 혐오함.
+
+id: judge_3_intro
+name: EPISODE_ACADEMY_RESEARCHER
+steps:
+  # ========== SCENE 1: 무중력 데이터 랩 ==========
+  - event: CHANGE_BG
+    payload:
+      color: "#E0F7FA" # 차갑고 멸균된 연구실을 연상시키는 홀로그램 창백한 푸른색
+
+  - narration: |
+      (은하 아카데미의 무중력 식품 공학 연구실.
+      사방에 띄워진 홀로그램 패널 위로 복잡한 화학 기호와 숫자들이 폭포수처럼 흘러내린다.)
+
+  - event: SHOW_CHARACTER
+    payload:
+      id: academy_researcher
+      position: center
+      image: "standing/researcher_01.jpg"
+
+  - 아카데미 수석 연구원: |
+      "스캔 완료. 표면 온도 72도, 수분 함량 18.5%.
+      가열 과정에서 발생한 마이야르 반응의 균일도는… 74점. 평범하군요."
+
+  - narration: |
+      (흰 연구 가운을 입은 수석 연구원이 안경을 밀어 올린다.
+      그의 시선은 볶음밥 자체가 아니라, 옆에 띄워진 스캐너의 데이터에만 꽂혀 있다.)
+
+  - 아카데미 수석 연구원: |
+      "제가 듣기로 당신의 요리법은 철저한 계산이 아닌,
+      소위 '감'이나 '손맛'이라는 비과학적인 미신에 의존한다고 하던데요."
+
+  - event: SHOW_CHARACTER
+    payload:
+      id: academy_researcher
+      position: center
+      image: "standing/researcher_01.jpg"
+      animation: "hologram_swipe" # (허공의 데이터를 신경질적으로 넘기는 연출)
+
+  - 아카데미 수석 연구원: |
+      "우주 항해는 장난이 아닙니다. 필수 아미노산 0.1mg의 결핍이
+      선원들의 신경계 붕괴를 초래할 수 있다는 걸 모르십니까?"
+
+  - narration: |
+      (연구원이 볶음밥에서 추출한 샘플을 시약병에 집어넣는다.
+      곧이어 패널에 거대한 원형 그래프가 그려진다.)
+
+  - 아카데미 수석 연구원: |
+      "탄수화물, 단백질, 지방의 다량 영양소 비율뿐만 아니라,
+      미량 영양소의 생체 흡수율까지 제 알고리즘이 낱낱이 파헤쳐 드리죠.
+      당신의 얄팍한 '감'이 수학 앞에 얼마나 무력한지 똑똑히 보여드리겠습니다."
+
+  # ========== SCENE 2: 평가 돌입 ==========
+  - event: HIDE_CHARACTER
+    payload:
+      id: academy_researcher
+
+  - event: CHANGE_BG
+    payload:
+      color: "#000000"
+
+  - narration: (무자비한 AI 스캐너가 볶음밥의 분자 구조를 분해하며 영양성분표를 역산하기 시작한다.)
+
+  - event: FLOW_COMPLETE
+    payload:
+      next: evaluation_nutrition_balance

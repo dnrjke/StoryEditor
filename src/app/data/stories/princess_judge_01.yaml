@@ -1,0 +1,65 @@
+# Judge 2: 루나 제국 황녀 (천연 원료 담당)
+# 컨셉: 오만하고 고상하며, 합성 조미료와 방부제를 극도로 혐오하는 완벽주의자.
+
+id: judge_2_intro
+name: EPISODE_LUNA_PRINCESS
+steps:
+  # ========== SCENE 1: 황실 연회장 ==========
+  - event: CHANGE_BG
+    payload:
+      color: "#4B0082" # 고귀함을 상징하는 짙은 황실의 보라색 (Imperial Indigo)
+
+  - narration: |
+      (루나 제국 본성의 최상층, 구름 위에 떠 있는 듯한 공중 정원.
+      최고급 대리석 바닥 위로 은은한 별빛 조명이 쏟아지고 있다.)
+
+  - event: SHOW_CHARACTER
+    payload:
+      id: luna_princess
+      position: center
+      image: "standing/princess_01.jpg"
+
+  - 루나 제국 황녀: |
+      "……이게 그 천박한 변방 성단에서 유행한다는 음식인가요?"
+
+  - narration: |
+      (화려한 드레스를 입은 황녀가 부채로 코를 가리며 미간을 찌푸린다.
+      그녀의 시선은 당신이 내민 볶음밥 접시를 벌레 보듯 향해 있다.)
+
+  - 루나 제국 황녀: |
+      "보기만 해도 싸구려 에테르 보존제와 인공 캡사이신 냄새가 진동을 하는군요.
+      제국의 고귀한 혀를 이런 공장제 쓰레기로 더럽히려 하다니, 불경죄로 다스려야 마땅합니다."
+
+  - event: SHOW_CHARACTER
+    payload:
+      id: luna_princess
+      position: center
+      image: "standing/princess_01.jpg"
+      animation: "fan_snap" # (부채를 탁 접는 날카로운 연출)
+
+  - 루나 제국 황녀: |
+      "제가 인정하는 건 오직 대자연이 허락한 '순수한 식자재'뿐.
+      원가 절감을 핑계로 영양성분표에 타협의 흔적을 남겼다면, 당장 이 자리에서 쫓아낼 줄 아세요."
+
+  - narration: |
+      (황녀가 우아한 손짓으로 은수저를 집어 든다.
+      주변에 도열한 제국 근위대원들의 눈빛이 매섭게 빛난다.)
+
+  - 루나 제국 황녀: |
+      "어디, 대항해의 끝에서 가져왔다는 당신의 그 '천연'을 한 번 증명해 보시죠.
+      단 1%의 불순물이라도 섞여 있다면…… 각오하는 게 좋을 겁니다."
+
+  # ========== SCENE 2: 평가 돌입 ==========
+  - event: HIDE_CHARACTER
+    payload:
+      id: luna_princess
+
+  - event: CHANGE_BG
+    payload:
+      color: "#000000"
+
+  - narration: (숨 막히는 정적 속에서, 까다로운 원재료 검수 절차가 시작된다.)
+
+  - event: FLOW_COMPLETE
+    payload:
+      next: evaluation_natural_ingredients
